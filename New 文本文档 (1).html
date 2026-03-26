@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>赣州音乐节热潮观察</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    html, body, #root { height: 100%; margin: 0; padding: 0; }
+    body { background: #090511; overflow: hidden; font-family: system-ui, -apple-system, sans-serif; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes riverMove { 0% { stroke-dashoffset: 260; opacity: 0.5; } 100% { stroke-dashoffset: 0; opacity: 0.85; } }
+    @keyframes moonBreath { 0%, 100% { transform: scale(1); opacity: 0.82; } 50% { transform: scale(1.06); opacity: 1; } }
+    @keyframes goldenDrop { 0%, 100% { opacity: 0.5; transform: translateY(0); } 50% { opacity: 1; transform: translateY(4px); } }
+    @keyframes noteFloat { 0%, 100% { transform: translateY(0px); opacity: 0.25; } 50% { transform: translateY(-10px); opacity: 0.7; } }
+    @keyframes drawRoute { to { stroke-dashoffset: 0; } }
+    @keyframes shimmer { 100% { transform: translateX(100%); } }
+    .animate-shimmer { animation: shimmer 2.5s infinite linear; }
+    .animate-fadeIn { animation: fadeIn 0.6s ease forwards; }
+    .river-line { stroke-dasharray: 280; stroke-dashoffset: 260; animation: riverMove 3.2s linear infinite; filter: drop-shadow(0 0 10px rgba(34,211,238,0.55)); }
+    .moon-glow { animation: moonBreath 4s ease-in-out infinite; }
+    .golden-stream { background: linear-gradient(180deg, rgba(251,191,36,0.15), rgba(251,191,36,0.85), rgba(251,191,36,0.12)); box-shadow: 0 0 10px rgba(251,191,36,0.45); animation: goldenDrop 3.2s ease-in-out infinite; }
+    .floating-note { animation: noteFloat 4s ease-in-out infinite; }
+    .fan-route-line { stroke-dasharray: 100; stroke-dashoffset: 100; animation: drawRoute 0.9s ease forwards; filter: drop-shadow(0 0 6px rgba(34,211,238,0.6)); }
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel" data-presets="react">
+    const { useState, useEffect, useMemo, useRef } = React;
+
+    // ================= 数据源 =================
+    const reasons = [
+      { title: "政策推力", tag: "文旅融合", short: "文旅政策为大型演出落地提供空间。", detail: "音乐节不再只是演出活动，而被纳入城市品牌塑造、旅游引流与夜经济激活的整体策略中。" },
+      { title: "青年需求", tag: "青年文化", short: "年轻人愿意为现场体验跨城出行。", detail: "在社交媒体时代，音乐节同时意味着旅行、社交与情绪释放，跨城观演成为新的消费习惯。" },
+      { title: "传播放大", tag: "平台扩散", short: "短视频和社交平台不断放大城市热度。", detail: "乐迷的打卡、现场片段与城市夜景形成二次传播，让赣州不断被更多年轻人重新认识。" },
+    ];
+
+    const timeline = [
+      { year: "2023", title: "Z纪元巅峰音乐节", detail: "赣州音乐节热潮进入大众视野，城市第一次被大量年轻观众与社交媒体同时看见。" },
+      { year: "2024", title: "扶摇直上音乐嘉年华", detail: "演出活动持续升温，夜间公共空间与文旅消费开始被音乐节持续激活。" },
+      { year: "2025", title: "邓紫棋赣州演唱会", detail: "10万+观众、外地观众约75%，演出成为城市形象更新的重要媒介。" },
+    ];
+
+    const backstage = [
+      { key: "策划", icon: "🗂️", detail: "从选题、场地、艺人沟通到城市协同，一场音乐节往往要经历数月筹备。" },
+      { key: "舞台", icon: "🎛️", detail: "灯光、音响、舞美与屏幕系统共同构成现场体验，细节决定观众对城市与演出的第一印象。" },
+      { key: "执行", icon: "🚧", detail: "安保、检票、交通组织、志愿者与调度共同形成一套精密的现场运行系统。" },
+    ];
+
+    const fanCities = {
+      广州: { label: "广州", role: "外地乐迷", text: "为了这场音乐节，专门坐高铁来赣州。", path: "M 72 70 C 66 64, 60 58, 52 50", dot: { x: 72, y: 70 }, labelPos: { x: 75, y: 67 } },
+      长沙: { label: "长沙", role: "外地乐迷", text: "第一次来赣州，没想到这里的夜晚和现场都这么热闹。", path: "M 28 28 C 34 34, 42 40, 52 50", dot: { x: 28, y: 28 }, labelPos: { x: 31, y: 25 } },
+      赣州: { label: "赣州", role: "本地观众", text: "音乐节让城市更年轻，也让本地人更愿意走进公共空间。", dot: { x: 52, y: 50 }, labelPos: { x: 56, y: 47 } },
+    };
+
+    const totalConsumption = [
+      { name: "餐饮", value: 30 }, { name: "酒店", value: 25 }, { name: "门票", value: 20 }, { name: "交通", value: 15 }, { name: "购物", value: 10 },
+    ];
+
+    const externalConsumption = [
+      { name: "外地餐饮", value: 35 }, { name: "外地酒店", value: 30 }, { name: "外地交通", value: 20 }, { name: "文创消费", value: 15 },
+    ];
+
+    // ================= 通用 UI 组件 =================
+    function CyberButton({ active, onClick, children, theme = "fuchsia", className = "" }) {
+      const colorClass = theme === "fuchsia" 
+        ? "border-fuchsia-400/40 bg-fuchsia-500/15 text-white shadow-[0_0_15px_rgba(217,70,239,0.3)]" 
+        : "border-cyan-400/40 bg-cyan-500/15 text-white shadow-[0_0_15px_rgba(34,211,238,0.3)]";
+
+      return (
+        <button
+          onClick={onClick}
+          className={`relative overflow-hidden rounded-full border px-4 py-2 text-sm font-medium tracking-wider transition-all duration-300 active:scale-95 hover:scale-105 ${active ? colorClass : "border-white/10 bg-white/5 text-white/55 hover:text-white/90 hover:shadow-[0_0_10px_rgba(255,255,255,0.1)]"} ${className}`}
+        >
+          {active && <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" />}
+          <span className="relative z-10">{children}</span>
+        </button>
+      );
+    }
+
+    function NeonCard({ children, className = "", style }) {
+      return (
+        <div
+          className={`rounded-[24px] border border-white/10 bg-white/5 backdrop-blur-md backdrop-saturate-150 transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_0_30px_rgba(168,85,247,0.25)] group relative overflow-hidden ${className}`}
+          style={{ ...style, filter: style?.filter ? `${style.filter} drop-shadow(0 4px 20px rgba(0,0,0,0.3))` : "drop-shadow(0 4px 20px rgba(0,0,0,0.3))" }}
+        >
+          <div className="absolute inset-0 rounded-[24px] opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none bg-gradient-to-br from-fuchsia-400/10 via-transparent to-cyan-400/10" />
+          <div className="relative z-10">{children}</div>
+        </div>
+      );
+    }
+
+    function SectionTitle({ eyebrow, title, subtitle }) {
+      return (
+        <div className="mb-6 relative z-20">
+          <div className="text-[11px] uppercase tracking-[0.35em] text-fuchsia-300/80 drop-shadow-[0_0_8px_rgba(217,70,239,0.5)]">{eyebrow}</div>
+          <h2 className="mt-2 text-[30px] font-semibold leading-tight text-white drop-shadow-[0_2px_15px_rgba(255,255,255,0.4)] relative inline-block">
+            {title}
+            <div className="absolute -bottom-2 left-0 h-[3px] w-12 bg-gradient-to-r from-fuchsia-400 to-cyan-400 rounded-full opacity-80 shadow-[0_0_10px_rgba(34,211,238,0.8)]" />
+          </h2>
+          {subtitle && <p className="mt-4 text-sm leading-6 text-white/65 tracking-wide">{subtitle}</p>}
+        </div>
+      );
+    }
+
+    function FullPage({ active, index, current, children }) {
+      const distance = index - current;
+      return (
+        <div
+          className="h-screen w-full shrink-0 px-5 py-8 flex flex-col justify-center relative"
+          style={{
+            opacity: active ? 1 : 0.3,
+            transform: `translateY(${distance * 40}px) scale(${active ? 1 : 0.96})`,
+            filter: `blur(${active ? 0 : 8}px)`,
+            transition: "all 700ms cubic-bezier(0.25, 1, 0.5, 1)",
+          }}
+        >
+          {children}
+        </div>
+      );
+    }
+
+    function TransitionLine({ children }) {
+      return (
+        <div className="flex items-center justify-center py-3 text-center text-sm leading-7 text-white/45 tracking-widest drop-shadow-[0_0_5px_rgba(255,255,255,0.2)]">
+          <div className="relative px-6">
+            {children}
+            <div className="absolute left-1/2 top-full mt-2 h-px w-20 -translate-x-1/2 bg-gradient-to-r from-fuchsia-400/0 via-fuchsia-400/80 to-cyan-400/0 shadow-[0_0_8px_rgba(217,70,239,0.6)]" />
+          </div>
+        </div>
+      );
+    }
+
+    // ================= 分页内容 =================
+    function CoverPage() {
+      return (
+        <div className="relative overflow-hidden rounded-[32px] border border-white/10 bg-[radial-gradient(circle_at_50%_20%,rgba(236,72,153,0.16),transparent_20%),radial-gradient(circle_at_50%_60%,rgba(34,211,238,0.10),transparent_25%),linear-gradient(180deg,#0a0714_0%,#090511_100%)] p-6 min-h-[78vh] flex flex-col justify-between shadow-[0_0_40px_rgba(0,0,0,0.5)]">
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div className="absolute right-[16%] top-[10%] h-12 w-12 rounded-full bg-white/80 shadow-[0_0_24px_rgba(255,255,255,0.45)] moon-glow" />
+            <div className="absolute inset-x-0 top-[12%] flex justify-around px-6 opacity-75">
+              {[0, 1, 2, 3, 4].map((col) => (
+                <div key={col} className="flex items-start gap-6">
+                  {[0, 1].map((i) => (
+                    <div key={`${col}-${i}`} className="flex flex-col items-center">
+                      <div className="mb-1 h-1.5 w-1.5 rounded-full bg-amber-200/90 shadow-[0_0_12px_rgba(251,191,36,0.9)]" />
+                      <div className="golden-stream rounded-full" style={{ height: `${80 + ((col + i) % 3) * 34}px`, width: 2 }} />
+                      <div className="mt-2 h-3 w-3 rounded-full bg-amber-300/90 shadow-[0_0_16px_rgba(251,191,36,0.8)]" />
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+            <div className="absolute inset-x-0 bottom-[24%] opacity-55">
+              <svg viewBox="0 0 100 30" className="w-full h-24">
+                <path d="M0 25 L8 18 L16 20 L24 12 L32 15 L40 8 L48 14 L56 6 L64 12 L72 7 L80 13 L88 10 L100 16" fill="none" stroke="rgba(255,255,255,0.20)" strokeWidth="1.1" />
+              </svg>
+            </div>
+            <div className="absolute inset-x-0 bottom-[18%] z-[1] flex justify-center">
+              <svg viewBox="0 0 430 140" className="w-full max-w-[430px] opacity-90">
+                <defs>
+                  <linearGradient id="coverRiverGlow" x1="0" x2="1" y1="0" y2="0">
+                    <stop offset="0%" stopColor="rgba(56,189,248,0)" />
+                    <stop offset="15%" stopColor="rgba(34,211,238,0.7)" />
+                    <stop offset="50%" stopColor="rgba(167,139,250,0.82)" />
+                    <stop offset="85%" stopColor="rgba(34,211,238,0.7)" />
+                    <stop offset="100%" stopColor="rgba(56,189,248,0)" />
+                  </linearGradient>
+                </defs>
+                <path d="M-10 110 C 70 80, 120 124, 190 98 S 320 62, 440 88" fill="none" stroke="url(#coverRiverGlow)" strokeWidth="10" strokeLinecap="round" className="river-line" />
+              </svg>
+            </div>
+            <div className="absolute inset-x-0 bottom-0 h-[30%] bg-[linear-gradient(180deg,transparent,rgba(0,0,0,0.58)_35%,rgba(0,0,0,0.95))]" />
+            <div className="absolute inset-x-0 bottom-[5%] flex items-end justify-between px-3 opacity-90">
+              {Array.from({ length: 11 }).map((_, i) => (
+                <div key={i} className="rounded-t-full border border-white/5 bg-[#130e1f]" style={{ width: `${26 + (i % 4) * 9}px`, height: `${58 + (i % 5) * 16}px` }} />
+              ))}
+            </div>
+          </div>
+          
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-fuchsia-900/10 via-transparent to-transparent mix-blend-overlay" />
+          <div className="pointer-events-none absolute inset-0 shadow-[inset_0_0_120px_rgba(0,0,0,0.8)] rounded-[32px]" />
+
+          <div className="relative z-10">
+            <div className="text-[11px] uppercase tracking-[0.4em] text-fuchsia-300/80 drop-shadow-[0_0_8px_rgba(217,70,239,0.5)]">Ganzhou · Music Festival</div>
+            <h1 className="mt-5 text-[46px] font-semibold tracking-[0.08em] drop-shadow-[0_2px_15px_rgba(255,255,255,0.4)]">声动虔城</h1>
+            <p className="mt-3 text-lg text-white/80 drop-shadow-[0_0_5px_rgba(255,255,255,0.3)]">当古城灯火，遇见音乐现场</p>
+          </div>
+
+          <div className="relative z-10">
+            <p className="max-w-[260px] text-sm leading-6 text-white/65">从宋城夜色到现场舞台，音乐节正在重写人们对赣州的想象。</p>
+            <div className="mt-8 flex justify-center gap-6 opacity-40">
+              {["·", "·", "·"].map((i, idx) => (
+                <div key={idx} className="floating-note text-xl drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]">{i}</div>
+              ))}
+            </div>
+            <div className="mt-8 text-center text-sm text-white/60 animate-bounce tracking-widest drop-shadow-[0_0_5px_rgba(255,255,255,0.5)]">滑动页面，进入城市与音乐的夜晚</div>
+          </div>
+        </div>
+      );
+    }
+
+    function DataPage() {
+      const [mode, setMode] = useState("audience");
+      const current = {
+        audience: { title: "现场规模爆发", a: "10万+", b: "8万", l1: "邓紫棋赣州演唱会观众人数", l2: "Z纪元音乐节观众规模", note: "赣州第一次在全国年轻受众的观演地图中被大规模看见。" },
+        city: { title: "城市消费被点亮", a: "98%", b: "48%", l1: "音乐节期间酒店入住率", l2: "餐饮营业额增长", note: "音乐节带来的不是短时流量，而是夜经济和服务业被集中激活。" },
+        tourists: { title: "外地流量进入城市", a: "75%", b: "3亿+", l1: "外地观众占比", l2: "相关消费拉动", note: "乐迷把赣州从“看演出”延展成“顺便旅行”的城市目的地。" },
+      }[mode];
+
+      return (
+        <div className="relative z-10">
+          <SectionTitle eyebrow="data impact" title="为什么突然有这么多音乐节？" subtitle="通过切换不同视角，读者可以自己判断这股热潮来自哪里。" />
+          <div className="mb-4 flex gap-2 overflow-x-auto pb-1 scrollbar-hide relative z-20">
+            {[["audience", "观众规模"], ["city", "城市消费"], ["tourists", "外地流量"]].map(([k, label]) => (
+              <CyberButton key={k} active={mode === k} onClick={() => setMode(k)} theme="fuchsia">{label}</CyberButton>
+            ))}
+          </div>
+          <NeonCard className="relative p-6 text-center">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,rgba(168,85,247,0.18),transparent_24%),radial-gradient(circle_at_50%_75%,rgba(34,211,238,0.12),transparent_26%)]" />
+            <div className="relative z-10 pointer-events-none">
+              <div className="mb-3 text-xs uppercase tracking-[0.26em] text-fuchsia-300/80 drop-shadow-[0_0_5px_rgba(217,70,239,0.5)]">{current.title}</div>
+              <div className="bg-gradient-to-r from-fuchsia-400 via-violet-300 to-cyan-300 bg-clip-text text-[72px] font-semibold leading-none text-transparent drop-shadow-[0_0_15px_rgba(217,70,239,0.3)]">{current.a}</div>
+              <p className="mt-3 text-white/70">{current.l1}</p>
+              <div className="my-6 h-px bg-white/10" />
+              <div className="text-[48px] font-semibold leading-none text-white drop-shadow-[0_2px_10px_rgba(255,255,255,0.3)]">{current.b}</div>
+              <p className="mt-3 text-white/70">{current.l2}</p>
+              <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm leading-6 text-white/65">{current.note}</div>
+            </div>
+          </NeonCard>
+        </div>
+      );
+    }
+
+    function ReasonsPage() {
+      const [active, setActive] = useState(0);
+      return (
+        <div className="relative w-full h-full flex flex-col justify-center">
+          <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden opacity-60">
+            <div className="w-full h-full bg-[linear-gradient(rgba(34,211,238,0.15)_1px,transparent_1px),linear-gradient(90deg,rgba(34,211,238,0.15)_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_80%_80%_at_50%_50%,#000_20%,transparent_100%)]" />
+            <div className="absolute top-[10%] left-[10%] w-48 h-48 bg-fuchsia-500/20 rounded-full blur-[80px] animate-pulse" />
+            <div className="absolute bottom-[10%] right-[10%] w-56 h-56 bg-cyan-500/15 rounded-full blur-[90px] animate-pulse" style={{ animationDelay: '1s' }} />
+          </div>
+
+          <div className="relative z-10">
+            <SectionTitle eyebrow="why now" title="这股热潮为什么会突然出现？" subtitle="不是单一原因，而是政策、青年需求与平台传播的共振。" />
+            <div className="grid gap-3 relative z-20">
+              {reasons.map((item, idx) => (
+                <button
+                  key={item.title}
+                  onClick={() => setActive(idx)}
+                  className={`rounded-[24px] border p-4 text-left transition-all duration-300 active:scale-[0.98] ${active === idx ? "border-cyan-300/40 bg-cyan-900/40 shadow-[0_0_20px_rgba(34,211,238,0.2)] backdrop-blur-md" : "border-white/10 bg-[#090511]/60 backdrop-blur-sm hover:border-white/30"}`}
+                >
+                  <div className="flex items-center justify-between pointer-events-none">
+                    <div>
+                      <div className="text-xs tracking-[0.18em] text-cyan-300/80">{item.tag}</div>
+                      <div className="mt-1 text-lg font-medium text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]">{item.title}</div>
+                    </div>
+                    <div className={`text-xl transition-transform duration-300 ${active === idx ? "text-cyan-300 rotate-180" : "text-white/40"}`}>
+                      {active === idx ? "−" : "+"}
+                    </div>
+                  </div>
+                  <div className="mt-2 text-sm text-white/65 pointer-events-none">{item.short}</div>
+                  <div className={`overflow-hidden transition-all duration-500 ease-in-out pointer-events-none ${active === idx ? "max-h-40 opacity-100 mt-3 border-t border-white/10 pt-3" : "max-h-0 opacity-0"}`}>
+                    <div className="text-sm leading-6 text-white/80">{item.detail}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function TimelinePage() {
+      const [active, setActive] = useState(2);
+      return (
+        <div className="relative z-10">
+          <SectionTitle eyebrow="timeline" title="赣州音乐节发展" subtitle="点击下方时间线，查看这场热潮是如何逐步被点燃的。" />
+          
+          <div className="relative pl-8 mt-4">
+            <div className="absolute left-[11px] top-3 bottom-6 w-[2px] bg-white/10 rounded-full" />
+            <div 
+              className="absolute left-[11px] top-3 w-[2px] bg-gradient-to-b from-fuchsia-500 to-cyan-400 rounded-full transition-all duration-700 ease-out shadow-[0_0_12px_rgba(34,211,238,0.8)]" 
+              style={{ height: `${(active / (timeline.length - 1)) * 100}%` }} 
+            />
+
+            {timeline.map((item, idx) => {
+              const isActive = active === idx;
+              const isPassed = idx <= active;
+              return (
+                <button key={item.year} onClick={() => setActive(idx)} className="relative mb-6 block w-full text-left group">
+                  <div 
+                    className={`absolute -left-[32px] top-1.5 h-[10px] w-[10px] rounded-full transition-all duration-500 z-10 
+                      ${isActive ? "scale-150 bg-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.9)]" 
+                      : isPassed ? "bg-fuchsia-400 shadow-[0_0_10px_rgba(217,70,239,0.6)]" 
+                      : "bg-white/20 group-hover:bg-white/50"}`} 
+                  />
+                  
+                  <div className={`text-sm tracking-[0.2em] transition-colors duration-300 ${isActive ? "text-cyan-300 drop-shadow-[0_0_8px_rgba(34,211,238,0.6)]" : "text-fuchsia-300/70"}`}>
+                    {item.year}
+                  </div>
+                  
+                  <NeonCard className={`mt-2 p-4 transition-all duration-300 active:scale-[0.98] ${isActive ? "border-cyan-300/30 bg-cyan-500/10 shadow-[0_0_20px_rgba(34,211,238,0.15)]" : "border-transparent hover:border-white/20"}`}>
+                    <div className="font-medium text-white">{item.title}</div>
+                    <div className="mt-2 text-sm leading-6 text-white/65">{item.detail}</div>
+                  </NeonCard>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
+    function BackstagePage() {
+      const [active, setActive] = useState(0);
+      return (
+        <div className="relative z-10">
+          <SectionTitle eyebrow="backstage" title="一场音乐节如何诞生？" subtitle="点击不同环节，体验一场音乐节从想法到现场的生成过程。" />
+          <div className="mb-5 flex items-center justify-between gap-2 rounded-[24px] border border-white/10 bg-[#090511]/60 p-3 backdrop-blur-md relative z-20">
+            {backstage.map((item, idx) => (
+              <button
+                key={item.key}
+                onClick={() => setActive(idx)}
+                className={`flex-1 rounded-2xl px-3 py-3 text-center transition-all duration-300 active:scale-95 border ${active === idx ? "bg-fuchsia-500/20 text-white shadow-[0_0_15px_rgba(232,121,249,0.3)] border-fuchsia-400/40" : "text-white/50 border-transparent hover:bg-white/10"}`}
+              >
+                <div className="text-xl drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]">{item.icon}</div>
+                <div className="mt-1 text-sm font-medium">{item.key}</div>
+              </button>
+            ))}
+          </div>
+          <NeonCard className="relative overflow-hidden p-6">
+            <div className="absolute inset-x-0 top-0 h-1 bg-white/5">
+              <div className="h-full bg-gradient-to-r from-fuchsia-500 to-cyan-400 transition-all duration-700 ease-out shadow-[0_0_12px_rgba(34,211,238,0.8)]" style={{ width: `${((active + 1) / backstage.length) * 100}%` }} />
+            </div>
+            <div className="mb-4 text-sm uppercase tracking-[0.2em] text-cyan-300/80 drop-shadow-[0_0_5px_rgba(34,211,238,0.5)]">Step 0{active + 1}</div>
+            <div className="text-2xl font-semibold text-white drop-shadow-[0_2px_10px_rgba(255,255,255,0.3)]">{backstage[active].icon} {backstage[active].key}</div>
+            <p className="mt-4 text-sm leading-7 text-white/75">{backstage[active].detail}</p>
+          </NeonCard>
+        </div>
+      );
+    }
+
+    function FanStoriesPage() {
+      const [cities, setCities] = useState([]);
+      const addCity = (city) => { if (!cities.includes(city)) setCities((prev) => [...prev, city]); };
+
+      return (
+        <div className="relative z-10">
+          <SectionTitle eyebrow="voices" title="他们为什么来到赣州？" subtitle="点击地图上的城市，看乐迷如何沿着路线来到这里。" />
+          <NeonCard className="p-4 mb-6 relative overflow-hidden">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(34,211,238,0.08),transparent_32%)] pointer-events-none" />
+            <div className="relative h-64 overflow-hidden rounded-[20px] bg-[linear-gradient(180deg,#101320,#090511)] shadow-[inset_0_0_20px_rgba(0,0,0,0.5)] z-10">
+              <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full opacity-85 pointer-events-none">
+                <defs>
+                  <linearGradient id="routeGlow" x1="0" x2="1" y1="0" y2="0">
+                    <stop offset="0%" stopColor="rgba(34,211,238,0.2)" />
+                    <stop offset="50%" stopColor="rgba(34,211,238,0.95)" />
+                    <stop offset="100%" stopColor="rgba(236,72,153,0.9)" />
+                  </linearGradient>
+                </defs>
+                <circle cx="52" cy="50" r="3.8" fill="#ec4899" className="animate-pulse" />
+                <text x="56" y="47" fontSize="4" fill="white">赣州</text>
+
+                {Object.keys(fanCities).map((key) => {
+                  const item = fanCities[key];
+                  const active = cities.includes(key);
+                  const pathId = `route-${key}`;
+                  return (
+                    <g key={key}>
+                      {item.path && <path d={item.path} fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="1.2" strokeDasharray="2 3" />}
+                      {active && item.path && <path d={item.path} fill="none" stroke="url(#routeGlow)" strokeWidth="2" className="fan-route-line" />}
+                      {item.path && <path id={pathId} d={item.path} fill="none" stroke="transparent" />}
+                      <circle cx={item.dot.x} cy={item.dot.y} r={key === "赣州" ? 3.8 : active ? 3.4 : 2.8} fill={key === "赣州" ? "#ec4899" : active ? "#22d3ee" : "rgba(255,255,255,0.45)"} className="transition-all duration-300" />
+                      <text x={item.labelPos.x} y={item.labelPos.y} fontSize="4" fill="white">{key}</text>
+                      {active && item.path && (
+                        <circle r="1.8" fill="white" filter="drop-shadow(0 0 4px #fff)">
+                          <animateMotion dur="2s" repeatCount="indefinite"><mpath href={`#${pathId}`} /></animateMotion>
+                        </circle>
+                      )}
+                    </g>
+                  );
+                })}
+              </svg>
+              <button onClick={() => addCity("长沙")} className="absolute left-4 top-4 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-sm text-white shadow-[0_0_10px_rgba(255,255,255,0.1)] transition active:scale-95 hover:bg-white/20 z-20">长沙</button>
+              <button onClick={() => addCity("广州")} className="absolute right-4 bottom-4 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-sm text-white shadow-[0_0_10px_rgba(255,255,255,0.1)] transition active:scale-95 hover:bg-white/20 z-20">广州</button>
+              <button onClick={() => addCity("赣州")} className="absolute left-1/2 bottom-4 -translate-x-1/2 rounded-full border border-fuchsia-400/40 bg-fuchsia-500/20 px-4 py-1.5 text-sm text-white shadow-[0_0_15px_rgba(217,70,239,0.3)] transition active:scale-95 hover:bg-fuchsia-500/40 z-20">本地视角</button>
+            </div>
+          </NeonCard>
+          
+          <div className="space-y-3 relative z-20">
+            {cities.map((city, i) => (
+              <NeonCard key={city} className="p-4 animate-fadeIn" style={{ animationDelay: `${i * 0.1}s` }}>
+                <div className="text-sm text-cyan-300/80">{fanCities[city].role}</div>
+                <div className="mt-2 text-white leading-7 drop-shadow-[0_2px_10px_rgba(255,255,255,0.2)]">💬 “{fanCities[city].text}”</div>
+              </NeonCard>
+            ))}
+          </div>
+          {cities.length === 0 && <div className="mt-6 text-center text-sm text-white/40 tracking-wider">点击地图按钮，看看谁正在赶来。</div>}
+        </div>
+      );
+    }
+
+    function InteractiveImpactPage() {
+      const [p, setP] = useState(0.2);
+      const ref = useRef(null);
+
+      const v = useMemo(() => ({
+        hotel: Math.round(70 + 28 * p),
+        dining: Math.round(12 + 36 * p),
+        visitors: (1.2 + 2.6 * p).toFixed(1),
+        glow: p,
+      }), [p]);
+
+      const update = (x) => {
+        const r = ref.current?.getBoundingClientRect();
+        if (!r) return;
+        setP(Math.min(1, Math.max(0, (x - r.left) / r.width)));
+      };
+
+      return (
+        <div className="relative z-10">
+          <SectionTitle eyebrow="interactive data" title="拖动查看城市热度" subtitle="亲手控制进度，感受音乐节拉动效应。向右拖动，点亮城市。" />
+          <NeonCard className="p-5 relative overflow-hidden">
+            <div className="absolute inset-0 transition-all duration-300 pointer-events-none" style={{ background: `radial-gradient(circle at 50% 60%, rgba(34,211,238,${0.2 + v.glow * 0.5}), transparent 40%), radial-gradient(circle at 50% 20%, rgba(236,72,153,${0.1 + v.glow * 0.4}), transparent 40%)` }} />
+            
+            <div className="relative h-60 rounded-[20px] overflow-hidden bg-[#0b0b16] shadow-[inset_0_0_30px_rgba(0,0,0,0.8)] border border-white/5 pointer-events-none">
+              <div className="absolute bottom-[30%] left-0 right-0 h-[3px] bg-cyan-400 transition-all" style={{ opacity: 0.2 + p, boxShadow: `0 0 ${10 + p * 20}px rgba(34,211,238,0.8)` }} />
+              <div className="absolute inset-0 flex justify-around items-start mt-10">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="w-[2px] bg-amber-300/80 rounded-full transition-all duration-100" style={{ height: 30 + p * 60, opacity: 0.3 + p * 0.7, boxShadow: `0 0 ${4 + p * 10}px rgba(251,191,36,${0.3 + p * 0.5})` }} />
+                ))}
+              </div>
+              <div className="absolute bottom-0 flex w-full justify-between px-2">
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <div key={i} className="bg-white/20 rounded-t-full border border-white/5 transition-all duration-100" style={{ width: 6, height: 20 + p * 60 + (i % 3) * 10, opacity: 0.4 + p * 0.6, boxShadow: p > 0.5 ? `0 0 ${p * 15}px rgba(236,72,153,0.4)` : 'none' }} />
+                ))}
+              </div>
+            </div>
+
+            <div ref={ref} className="mt-6 h-12 rounded-full bg-white/5 border border-white/10 relative cursor-grab active:cursor-grabbing hover:bg-white/10 transition-colors z-20" onMouseMove={(e) => e.buttons === 1 && update(e.clientX)} onClick={(e) => update(e.clientX)}>
+              <div className="absolute top-1/2 left-4 right-4 h-[4px] bg-white/10 -translate-y-1/2 rounded-full pointer-events-none" />
+              <div className="absolute top-1/2 left-4 h-[4px] bg-gradient-to-r from-fuchsia-500 to-cyan-400 rounded-full shadow-[0_0_12px_rgba(34,211,238,0.6)] pointer-events-none" style={{ width: `calc((100% - 32px) * ${p})`, transform: "translateY(-50%)" }} />
+              <div className="absolute top-1/2 w-7 h-7 bg-white rounded-full border-[3px] border-cyan-300 shadow-[0_0_20px_rgba(255,255,255,0.9)] transition-transform hover:scale-110 pointer-events-none" style={{ left: `calc(16px + (100% - 32px) * ${p} - 14px)`, transform: "translateY(-50%)" }} />
+            </div>
+          </NeonCard>
+
+          <div className="grid grid-cols-2 gap-3 mt-4">
+            <NeonCard className="p-4 text-center text-lg font-medium">🏨 Hotel {v.hotel}%</NeonCard>
+            <NeonCard className="p-4 text-center text-lg font-medium text-cyan-300">🍽️ Dining +{v.dining}%</NeonCard>
+            <NeonCard className="col-span-2 p-4 flex justify-between items-center text-lg font-medium">
+              <span>🚶 Visitors Flow</span>
+              <span className="text-fuchsia-300 text-2xl drop-shadow-[0_0_8px_rgba(217,70,239,0.5)]">{v.visitors}x</span>
+            </NeonCard>
+          </div>
+        </div>
+      );
+    }
+
+    function ConsumptionPage() {
+      const [mode, setMode] = useState("total");
+      const [anim, setAnim] = useState(0);
+
+      useEffect(() => {
+        setAnim(0);
+        const t = requestAnimationFrame(() => setAnim(1));
+        return () => cancelAnimationFrame(t);
+      }, [mode]);
+
+      const data = mode === "total" ? totalConsumption : externalConsumption;
+      const totalAngle = data.reduce((s, d) => s + d.value, 0) * 3.6;
+      const first = data[0]?.value ?? 0;
+      const second = data[1]?.value ?? 0;
+
+      return (
+        <div className="relative z-10">
+          <SectionTitle eyebrow="consumption" title="带动了怎样的消费结构？" subtitle="切换视角查看整体消费结构与跨城消费分布。" />
+          <div className="mb-4 flex gap-2 relative z-20">
+            {[["total", "整体消费"], ["external", "外地消费"]].map(([k, label]) => (
+              <CyberButton key={k} active={mode === k} onClick={() => setMode(k)} theme="cyan">{label}</CyberButton>
+            ))}
+          </div>
+
+          <NeonCard className="p-6">
+            <div className="space-y-4">
+              {data.map((item, i) => (
+                <div key={item.name}>
+                  <div className="mb-1 flex items-center justify-between text-sm text-white/70">
+                    <span>{item.name}</span>
+                    <span className="text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.4)] font-medium">{item.value}%</span>
+                  </div>
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-white/10 shadow-[inset_0_0_5px_rgba(0,0,0,0.5)]">
+                    <div className="h-full bg-gradient-to-r from-fuchsia-500 via-violet-500 to-cyan-400 transition-all duration-700 shadow-[0_0_10px_rgba(34,211,238,0.5)]" style={{ width: `${item.value * anim}%`, transitionDelay: `${i * 80}ms` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-8 pt-6 border-t border-white/10 flex items-center justify-between gap-5">
+              <div
+                className="h-24 w-24 rounded-full border border-white/10 shrink-0"
+                style={{
+                  background: `conic-gradient(#f472b6 0 ${first * 3.6}deg, #a78bfa ${first * 3.6}deg ${(first + second) * 3.6}deg, #22d3ee ${(first + second) * 3.6}deg ${totalAngle}deg, rgba(255,255,255,0.05) ${totalAngle}deg 360deg)`,
+                  boxShadow: "0 0 20px rgba(168,85,247,0.3)",
+                  transform: `scale(${0.9 + anim * 0.1})`,
+                  transition: "transform 400ms cubic-bezier(0.34, 1.56, 0.64, 1)",
+                }}
+              />
+              <div className="text-sm leading-6 text-white/75">
+                {mode === "total" ? "餐饮与酒店合计占比超过一半，说明音乐节对服务业具有最直接、最庞大的拉动作用。" : "外地观众的消费更集中在餐饮与住宿，完美体现了跨城流动带来的城市消费绝对增量。"}
+              </div>
+            </div>
+          </NeonCard>
+        </div>
+      );
+    }
+
+    function EndingPage() {
+      return (
+        <div className="flex flex-col items-center justify-center text-center h-full relative z-10 px-6">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.15),transparent_60%)] pointer-events-none animate-pulse" />
+          
+          <div className="w-16 h-[2px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent mb-8 shadow-[0_0_10px_rgba(34,211,238,0.8)]" />
+          
+          <h2 className="text-3xl font-light tracking-[0.2em] leading-loose text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]">
+            这座城市，<br/>
+            正在被重新定义。
+          </h2>
+          
+          <p className="mt-8 text-sm tracking-widest text-fuchsia-300/80 uppercase">
+            Ganzhou Music Festival
+          </p>
+          
+          <div className="w-16 h-[2px] bg-gradient-to-r from-transparent via-fuchsia-400 to-transparent mt-8 shadow-[0_0_10px_rgba(217,70,239,0.8)]" />
+        </div>
+      );
+    }
+
+    // ================= 主应用入口 =================
+    function App() {
+      const [page, setPage] = useState(0);
+      const touchStartY = useRef(null);
+      
+      const pages = [
+        <CoverPage key="cover" />,
+        <div key="t1"><TransitionLine>当灯光亮起，<br />人群开始聚集。</TransitionLine><DataPage /></div>,
+        <div key="t2"><TransitionLine>当数据被看见，<br />问题才刚刚开始。</TransitionLine><ReasonsPage /></div>,
+        <div key="t3"><TransitionLine>这并不是一夜之间的爆发，<br />而是一段逐渐累积的过程。</TransitionLine><TimelinePage /></div>,
+        <div key="t4"><TransitionLine>每一场热闹背后，<br />都有看不见的准备。</TransitionLine><BackstagePage /></div>,
+        <div key="t5"><TransitionLine>而真正让城市流动的，<br />是人。</TransitionLine><FanStoriesPage /></div>,
+        <div key="t6"><TransitionLine>人来了，<br />城市开始发生变化。</TransitionLine><InteractiveImpactPage /></div>,
+        <div key="t7"><TransitionLine>热闹并不只停留在现场，<br />它还会进入城市消费系统。</TransitionLine><ConsumptionPage /></div>,
+        <div key="end"><TransitionLine>最后，人们记住的，<br />也许不止是一场演出。</TransitionLine><EndingPage /></div>,
+      ];
+
+      useEffect(() => {
+        let locked = false;
+        const handleWheel = (e) => {
+          if (locked || Math.abs(e.deltaY) < 15) return;
+          locked = true;
+          if (e.deltaY > 0) setPage(p => Math.min(pages.length - 1, p + 1));
+          else setPage(p => Math.max(0, p - 1));
+          setTimeout(() => { locked = false; }, 600);
+        };
+
+        const handleKeyDown = (e) => {
+          if (e.key === "ArrowDown" || e.key === "PageDown") setPage(p => Math.min(pages.length - 1, p + 1));
+          else if (e.key === "ArrowUp" || e.key === "PageUp") setPage(p => Math.max(0, p - 1));
+        };
+
+        window.addEventListener("wheel", handleWheel, { passive: true });
+        window.addEventListener("keydown", handleKeyDown);
+        return () => {
+          window.removeEventListener("wheel", handleWheel);
+          window.removeEventListener("keydown", handleKeyDown);
+        };
+      }, [pages.length]);
+
+      const onTouchStart = (e) => { touchStartY.current = e.touches[0].clientY; };
+      const onTouchEnd = (e) => {
+        if (touchStartY.current === null) return;
+        const dy = touchStartY.current - e.changedTouches[0].clientY;
+        if (Math.abs(dy) > 40) {
+          if (dy > 0) setPage(p => Math.min(pages.length - 1, p + 1));
+          else setPage(p => Math.max(0, p - 1));
+        }
+        touchStartY.current = null;
+      };
+
+      return (
+        <div className="h-screen w-full overflow-hidden bg-[#090511] text-white selection:bg-fuchsia-500/30 touch-none" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+          <div className="h-full w-full" style={{ transform: `translateY(-${page * 100}vh)`, transition: "transform 800ms cubic-bezier(0.25, 1, 0.4, 1)" }}>
+            {pages.map((content, index) => (
+              <FullPage key={index} active={page === index} index={index} current={page}>
+                {content}
+              </FullPage>
+            ))}
+          </div>
+
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex flex-col gap-3 z-50">
+            {pages.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setPage(index)}
+                className={`w-2.5 rounded-full transition-all duration-300 ${page === index ? "h-6 bg-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.8)]" : "h-2.5 bg-white/20 hover:bg-white/50 hover:scale-110"}`}
+                aria-label={`跳转至第 ${index + 1} 页`}
+              />
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // 渲染应用
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
